@@ -1,113 +1,930 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>3D Cyber Dashboard</title>
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NX-OS Terminal</title>
 <style>
-body {
-  margin: 0;
-  background: black;
-  font-family: monospace;
-  color: #00ffcc;
-  overflow-x: hidden;
-}
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
 
-/* 3D Scene */
-.scene {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  perspective: 1000px;
-}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* 3D Card */
-.card {
-  width: 320px;
-  padding: 20px;
-  background: rgba(0,0,0,0.85);
-  border: 1px solid #00ffcc;
-  transform: rotateY(20deg) rotateX(10deg);
-  transition: 0.5s;
-  box-shadow: 0 0 25px #00ffcc;
-  text-align: center;
-}
-
-.card:hover {
-  transform: rotateY(0deg) rotateX(0deg) scale(1.05);
-}
-
-button {
-  background: transparent;
-  border: 1px solid #00ffcc;
-  color: #00ffcc;
-  padding: 10px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-button:hover {
-  background: #00ffcc;
-  color: black;
-}
-
-.green {
-  color: lime;
-}
-
-/* Output Terminal */
-#output {
-  padding: 20px;
-  white-space: pre-line;
-  max-width: 600px;
-  margin: auto;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .card {
-    width: 90%;
+  :root {
+    --bg:        #020c06;
+    --panel:     #040f08;
+    --border:    #0f4a1e;
+    --green:     #00ff6a;
+    --green-dim: #00b84a;
+    --cyan:      #00ffe7;
+    --red:       #ff2d55;
+    --yellow:    #ffe135;
+    --text:      #b8ffcf;
+    --muted:     #2e6645;
+    --glow:      0 0 8px #00ff6a88, 0 0 20px #00ff6a33;
+    --glow-lg:   0 0 16px #00ff6aaa, 0 0 40px #00ff6a55;
+    --glow-cyan: 0 0 8px #00ffe788, 0 0 20px #00ffe733;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-hud:  'Orbitron', sans-serif;
   }
-}
-</style>
 
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    overflow-x: hidden;
+  }
+
+  /* ── Scanlines overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 9999;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(0,0,0,.18) 3px,
+      rgba(0,0,0,.18) 4px
+    );
+  }
+
+  /* ── CRT flicker ── */
+  @keyframes flicker {
+    0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:.85} 94%{opacity:1} 96%{opacity:.9} 97%{opacity:1}
+  }
+  body { animation: flicker 8s infinite; }
+
+  /* ══════════════════════════════════════
+     LOGIN SCREEN
+  ══════════════════════════════════════ */
+  #login-screen {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 50%, #001a0d 0%, var(--bg) 100%);
+  }
+
+  .login-logo {
+    font-family: var(--font-hud);
+    font-size: clamp(2rem, 6vw, 3.8rem);
+    font-weight: 900;
+    letter-spacing: .15em;
+    color: var(--green);
+    text-shadow: var(--glow-lg);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .login-sub {
+    font-size: .75rem;
+    letter-spacing: .35em;
+    color: var(--muted);
+    margin-bottom: 48px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .login-box {
+    width: 100%; max-width: 420px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 36px 32px;
+    box-shadow: 0 0 0 1px #001a0d, var(--glow);
+    position: relative;
+  }
+  .login-box::before {
+    content: '// AUTHENTICATE';
+    position: absolute; top: -11px; left: 20px;
+    background: var(--panel);
+    padding: 0 8px;
+    font-size: .65rem;
+    letter-spacing: .3em;
+    color: var(--green-dim);
+  }
+
+  .field-label {
+    font-size: .65rem;
+    letter-spacing: .25em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .field-wrap { margin-bottom: 22px; }
+  .login-input {
+    width: 100%;
+    background: #000e05;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--green);
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    caret-color: var(--green);
+  }
+  .login-input:focus {
+    border-color: var(--green-dim);
+    box-shadow: var(--glow);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: var(--font-hud);
+    font-size: .8rem;
+    letter-spacing: .2em;
+    padding: 13px;
+    cursor: pointer;
+    text-transform: uppercase;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+    transition: color .2s, box-shadow .2s;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--green);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .25s ease;
+    z-index: 0;
+  }
+  .btn-primary:hover::before { transform: scaleX(1); }
+  .btn-primary:hover { color: #000; box-shadow: var(--glow-lg); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .login-error {
+    color: var(--red);
+    font-size: .75rem;
+    margin-top: 14px;
+    min-height: 18px;
+    letter-spacing: .05em;
+  }
+
+  .hint {
+    margin-top: 20px;
+    font-size: .65rem;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: .08em;
+  }
+
+  /* ══════════════════════════════════════
+     DASHBOARD
+  ══════════════════════════════════════ */
+  #dashboard { display: none; flex-direction: column; height: 100vh; }
+
+  /* ── Navbar ── */
+  .navbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .navbar::after {
+    content:'';
+    position: absolute; bottom: -2px; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    opacity: .4;
+  }
+  .nav-brand {
+    font-family: var(--font-hud);
+    font-size: .85rem;
+    font-weight: 700;
+    letter-spacing: .2em;
+    color: var(--green);
+    text-shadow: var(--glow);
+  }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-user {
+    font-size: .7rem;
+    letter-spacing: .15em;
+    color: var(--muted);
+  }
+  .nav-user span { color: var(--cyan); }
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: var(--font-hud);
+    font-size: .6rem;
+    letter-spacing: .15em;
+    padding: 5px 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-transform: uppercase;
+    transition: background .2s, color .2s, box-shadow .2s;
+  }
+  .btn-logout:hover {
+    background: var(--red);
+    color: #000;
+    box-shadow: 0 0 12px #ff2d5588;
+  }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex; gap: 24px; align-items: center;
+    padding: 6px 20px;
+    background: #020a04;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .status-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .6rem; letter-spacing: .15em;
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .status-dot.cyan   { background: var(--cyan);   box-shadow: 0 0 6px var(--cyan); }
+  @keyframes pulse {
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.5;transform:scale(.7)}
+  }
+  .status-label { color: var(--muted); }
+  .status-val   { color: var(--cyan); }
+
+  /* ── Main layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 200px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+  @media(max-width:600px){ .sidebar{ display:none; } }
+
+  .sidebar-section {
+    padding: 0 16px 12px;
+    font-size: .58rem;
+    letter-spacing: .3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .sidebar-item {
+    padding: 7px 20px;
+    font-size: .72rem;
+    letter-spacing: .1em;
+    color: var(--green-dim);
+    cursor: pointer;
+    transition: background .15s, color .15s, padding-left .15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-item:hover,
+  .sidebar-item.active {
+    background: rgba(0,255,106,.07);
+    color: var(--green);
+    padding-left: 26px;
+  }
+  .sidebar-item .icon { opacity: .7; }
+
+  /* ── Terminal area ── */
+  .terminal-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    overflow: hidden; padding: 16px;
+    gap: 12px;
+  }
+  .terminal-header {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-hud);
+    font-size: .65rem;
+    letter-spacing: .2em;
+    color: var(--muted);
+  }
+  .term-dots { display:flex; gap:5px; }
+  .term-dot  { width:10px;height:10px;border-radius:50%; }
+  .term-dot.r{background:#ff2d55;box-shadow:0 0 4px #ff2d55;}
+  .term-dot.y{background:#ffe135;box-shadow:0 0 4px #ffe135;}
+  .term-dot.g{background:#00ff6a;box-shadow:0 0 4px #00ff6a;}
+
+  .terminal-output {
+    flex: 1;
+    background: #000d04;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: clamp(.75rem, 2vw, .88rem);
+    line-height: 1.7;
+    box-shadow: inset 0 0 30px #000a03;
+    scroll-behavior: smooth;
+  }
+  .terminal-output::-webkit-scrollbar { width: 6px; }
+  .terminal-output::-webkit-scrollbar-track { background: #000; }
+  .terminal-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .t-line { display: block; }
+  .t-prompt { color: var(--green); }
+  .t-cmd    { color: var(--cyan); }
+  .t-info   { color: var(--text); }
+  .t-warn   { color: var(--yellow); }
+  .t-error  { color: var(--red); }
+  .t-success{ color: var(--green); }
+  .t-muted  { color: var(--muted); }
+  .t-accent { color: var(--cyan); text-shadow: var(--glow-cyan); }
+
+  /* typing animation */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor {
+    display: inline-block;
+    width: 8px; height: 1em;
+    background: var(--green);
+    vertical-align: text-bottom;
+    animation: blink .9s step-end infinite;
+    box-shadow: var(--glow);
+  }
+
+  /* fade-in for new lines */
+  @keyframes lineIn {
+    from{opacity:0;transform:translateY(4px)}
+    to  {opacity:1;transform:translateY(0)}
+  }
+  .t-line { animation: lineIn .12s ease forwards; }
+
+  /* ── Input row ── */
+  .input-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #000d04;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 14px;
+    box-shadow: var(--glow);
+  }
+  .input-prompt {
+    color: var(--green);
+    font-size: .88rem;
+    white-space: nowrap;
+    text-shadow: var(--glow);
+    flex-shrink: 0;
+  }
+  .term-input {
+    flex: 1;
+    background: transparent;
+    border: none; outline: none;
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: .88rem;
+    caret-color: var(--green);
+    letter-spacing: .03em;
+  }
+  .btn-run {
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green-dim);
+    font-family: var(--font-hud);
+    font-size: .55rem;
+    letter-spacing: .15em;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    text-transform: uppercase;
+    transition: all .2s;
+  }
+  .btn-run:hover { border-color: var(--green); color: var(--green); box-shadow: var(--glow); }
+
+  /* ── Scan animation ── */
+  @keyframes scanBar {
+    0%   { width: 0%; opacity: 1; }
+    80%  { width: 100%; opacity: 1; }
+    100% { width: 100%; opacity: 0; }
+  }
+  .scan-bar-wrap {
+    height: 3px; background: #001a0d;
+    border-radius: 2px; overflow: hidden;
+    margin: 2px 0;
+  }
+  .scan-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    box-shadow: var(--glow-cyan);
+    animation: scanBar var(--dur, 1.2s) ease forwards;
+  }
+
+  .hidden { display: none !important; }
+</style>
 </head>
 <body>
 
-<div class="scene">
-  <div class="card">
-    <h2>⚡ SYSTEM ACCESS</h2>
-    <p>Status: <span class="green">ONLINE</span></p>
-    <button onclick="loadData()">Run Scan</button>
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+  <div class="login-logo">NX&#8209;OS</div>
+  <div class="login-sub">Neural Execution Operating System &nbsp;&#9670;&nbsp; v4.2.1</div>
+
+  <div class="login-box">
+    <div class="field-wrap">
+      <label class="field-label" for="l-user">Operator ID</label>
+      <input class="login-input" id="l-user" type="text" autocomplete="username"
+             placeholder="enter username" spellcheck="false" />
+    </div>
+    <div class="field-wrap">
+      <label class="field-label" for="l-pass">Auth Token</label>
+      <input class="login-input" id="l-pass" type="password" autocomplete="current-password"
+             placeholder="enter password" />
+    </div>
+    <button class="btn-primary" id="btn-login"><span>&#9654;&nbsp; AUTHENTICATE</span></button>
+    <div class="login-error" id="login-error"></div>
   </div>
+  <div class="hint">demo credentials &nbsp;/&nbsp; any username &nbsp;+&nbsp; any password ≥ 4 chars</div>
 </div>
 
-<div id="output"></div>
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="dashboard">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">&#9670; NX-OS TERMINAL</div>
+    <div class="nav-right">
+      <div class="nav-user">OPERATOR:&nbsp;<span id="nav-username"></span></div>
+      <button class="btn-logout" id="btn-logout">&#9587; LOGOUT</button>
+    </div>
+  </nav>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span class="status-label">SYS</span>
+      <span class="status-val">ONLINE</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot yellow"></div>
+      <span class="status-label">FIREWALL</span>
+      <span class="status-val" id="fw-val">ACTIVE</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot cyan"></div>
+      <span class="status-label">NET</span>
+      <span class="status-val">ENCRYPTED</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span class="status-label">UPTIME</span>
+      <span class="status-val" id="uptime-val">00:00:00</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot cyan"></div>
+      <span class="status-label">SESSION</span>
+      <span class="status-val" id="sess-id">----</span>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">Navigation</div>
+      <div class="sidebar-item active"><span class="icon">▶</span>Terminal</div>
+      <div class="sidebar-item"><span class="icon">◈</span>System Info</div>
+      <div class="sidebar-item"><span class="icon">◉</span>Network</div>
+      <div class="sidebar-item"><span class="icon">◆</span>Logs</div>
+      <div class="sidebar-item"><span class="icon">⬡</span>Processes</div>
+      <div style="margin-top:auto;padding:16px;font-size:.6rem;color:var(--muted);letter-spacing:.1em;">
+        NX-OS&nbsp;v4.2.1<br/>KERNEL&nbsp;9.1.0-nx
+      </div>
+    </aside>
+
+    <!-- Terminal -->
+    <div class="terminal-wrap">
+      <div class="terminal-header">
+        <div class="term-dots">
+          <div class="term-dot r"></div>
+          <div class="term-dot y"></div>
+          <div class="term-dot g"></div>
+        </div>
+        <span>bash — NX-OS SHELL</span>
+      </div>
+
+      <div class="terminal-output" id="term-out"></div>
+
+      <div class="input-row">
+        <div class="input-prompt" id="input-prompt">root@nx-os:~$</div>
+        <input class="term-input" id="term-input" type="text"
+               autocomplete="off" spellcheck="false"
+               placeholder="type a command…" />
+        <button class="btn-run" id="btn-run">EXEC</button>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /dashboard -->
 
 <script>
-function loadData() {
-  const output = document.getElementById("output");
-  output.innerHTML = "Scanning system...\n";
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+const USERS_KEY   = 'nx_users';
+const SESSION_KEY = 'nx_session';
 
-  let i = 0;
-  const fakeLogs = [
-    "Initializing modules...",
-    "Connecting to secure server...",
-    "Bypassing firewall...",
-    "Accessing encrypted nodes...",
-    "Decrypting data...",
-    "Fetching results...",
-    "Scan complete ✔"
+let currentUser = null;
+let uptimeStart  = null;
+let uptimeTimer  = null;
+let history      = [];
+let histIdx      = -1;
+let scanning     = false;
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  const sess = loadSession();
+  if (sess) {
+    currentUser = sess;
+    showDashboard();
+  } else {
+    showLogin();
+  }
+  wireLogin();
+  wireDashboard();
+});
+
+/* ══════════════════════════════════════
+   SESSION
+══════════════════════════════════════ */
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+function saveSession(u) { localStorage.setItem(SESSION_KEY, JSON.stringify(u)); }
+function clearSession()  { localStorage.removeItem(SESSION_KEY); }
+
+/* ══════════════════════════════════════
+   LOGIN LOGIC
+══════════════════════════════════════ */
+function wireLogin() {
+  const btnLogin  = document.getElementById('btn-login');
+  const inputUser = document.getElementById('l-user');
+  const inputPass = document.getElementById('l-pass');
+
+  btnLogin.addEventListener('click', attemptLogin);
+  [inputUser, inputPass].forEach(el =>
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); })
+  );
+}
+
+function attemptLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  const errEl    = document.getElementById('login-error');
+
+  errEl.textContent = '';
+  if (!username)          { errEl.textContent = '⚠ operator id required'; return; }
+  if (password.length < 4){ errEl.textContent = '⚠ auth token too short (min 4 chars)'; return; }
+
+  // accept any valid user
+  currentUser = { username, loggedAt: Date.now() };
+  saveSession(currentUser);
+  showDashboard();
+}
+
+/* ══════════════════════════════════════
+   SCREEN TRANSITIONS
+══════════════════════════════════════ */
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display    = 'none';
+  document.getElementById('l-user').focus();
+}
+
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  const dash = document.getElementById('dashboard');
+  dash.style.display = 'flex';
+
+  // populate nav
+  document.getElementById('nav-username').textContent = currentUser.username.toUpperCase();
+  document.getElementById('input-prompt').textContent =
+    `${currentUser.username}@nx-os:~$`;
+
+  // session id
+  document.getElementById('sess-id').textContent =
+    Math.random().toString(36).substring(2,8).toUpperCase();
+
+  // uptime
+  uptimeStart = Date.now();
+  clearInterval(uptimeTimer);
+  uptimeTimer = setInterval(tickUptime, 1000);
+
+  // boot sequence
+  clearOutput();
+  bootSequence();
+  document.getElementById('term-input').focus();
+}
+
+function logout() {
+  clearSession();
+  currentUser = null;
+  clearInterval(uptimeTimer);
+  scanning = false;
+  document.getElementById('l-user').value = '';
+  document.getElementById('l-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  showLogin();
+}
+
+/* ══════════════════════════════════════
+   UPTIME
+══════════════════════════════════════ */
+function tickUptime() {
+  const diff = Math.floor((Date.now() - uptimeStart) / 1000);
+  const h = String(Math.floor(diff / 3600)).padStart(2,'0');
+  const m = String(Math.floor((diff % 3600) / 60)).padStart(2,'0');
+  const s = String(diff % 60).padStart(2,'0');
+  document.getElementById('uptime-val').textContent = `${h}:${m}:${s}`;
+}
+
+/* ══════════════════════════════════════
+   DASHBOARD WIRING
+══════════════════════════════════════ */
+function wireDashboard() {
+  document.getElementById('btn-logout').addEventListener('click', logout);
+
+  const input = document.getElementById('term-input');
+  const btnRun = document.getElementById('btn-run');
+
+  btnRun.addEventListener('click', submitCommand);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { submitCommand(); return; }
+    if (e.key === 'ArrowUp') {
+      if (histIdx < history.length - 1) { histIdx++; input.value = history[histIdx]; }
+      e.preventDefault();
+    }
+    if (e.key === 'ArrowDown') {
+      if (histIdx > 0) { histIdx--; input.value = history[histIdx]; }
+      else { histIdx = -1; input.value = ''; }
+      e.preventDefault();
+    }
+  });
+}
+
+/* ══════════════════════════════════════
+   TERMINAL OUTPUT
+══════════════════════════════════════ */
+const out = () => document.getElementById('term-out');
+
+function clearOutput() { out().innerHTML = ''; }
+
+function appendLine(text, cls = 't-info', delay = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const span = document.createElement('span');
+      span.className = `t-line ${cls}`;
+      span.innerHTML = text;
+      out().appendChild(span);
+      out().appendChild(document.createElement('br'));
+      out().scrollTop = out().scrollHeight;
+      resolve();
+    }, delay);
+  });
+}
+
+function appendBlank(delay = 0) { return appendLine('&nbsp;', 't-info', delay); }
+
+/* Typing animation for a single line */
+async function typewriterLine(text, cls = 't-accent', delay = 0, speed = 28) {
+  await new Promise(r => setTimeout(r, delay));
+  const span = document.createElement('span');
+  span.className = `t-line ${cls}`;
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  out().appendChild(span);
+  out().appendChild(cursor);
+  out().appendChild(document.createElement('br'));
+  for (const ch of text) {
+    span.textContent += ch;
+    out().scrollTop = out().scrollHeight;
+    await new Promise(r => setTimeout(r, speed));
+  }
+  cursor.remove();
+}
+
+/* ── Scan bar helper ── */
+function appendScanBar(duration = 1200, delay = 0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const wrap = document.createElement('div');
+      wrap.className = 'scan-bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'scan-bar';
+      bar.style.setProperty('--dur', duration + 'ms');
+      wrap.appendChild(bar);
+      out().appendChild(wrap);
+      out().scrollTop = out().scrollHeight;
+      setTimeout(resolve, duration + 100);
+    }, delay);
+  });
+}
+
+/* ══════════════════════════════════════
+   BOOT SEQUENCE
+══════════════════════════════════════ */
+async function bootSequence() {
+  const u = currentUser.username;
+  const d = new Date().toUTCString();
+
+  await appendLine(`<span class="t-success">NX-OS v4.2.1</span>&nbsp;&nbsp;<span class="t-muted">Kernel 9.1.0-nx &nbsp;|&nbsp; ${d}</span>`, 't-info', 0);
+  await appendLine('Initializing secure shell environment…', 't-muted', 120);
+  await appendScanBar(900, 180);
+  await appendLine(`✔ Session established for <span class="t-accent">${u.toUpperCase()}</span>`, 't-success', 60);
+  await appendLine('✔ Encryption layer ACTIVE (AES-512-GCM)', 't-success', 120);
+  await appendLine('✔ Stealth routing ENABLED', 't-success', 180);
+  await appendBlank(240);
+  await appendLine('Type <span class="t-accent">help</span> for available commands.', 't-muted', 300);
+  await appendBlank(340);
+}
+
+/* ══════════════════════════════════════
+   COMMAND ENGINE
+══════════════════════════════════════ */
+function submitCommand() {
+  if (scanning) return;
+  const input = document.getElementById('term-input');
+  const raw   = input.value.trim();
+  if (!raw) return;
+
+  history.unshift(raw);
+  histIdx = -1;
+  input.value = '';
+
+  // echo
+  const prompt = `<span class="t-prompt">${currentUser.username}@nx-os:~$</span>&nbsp;<span class="t-cmd">${escHtml(raw)}</span>`;
+  appendLine(prompt, 't-info');
+
+  const [cmd, ...args] = raw.toLowerCase().split(/\s+/);
+  handleCommand(cmd, args, raw);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function handleCommand(cmd, args, raw) {
+  switch (cmd) {
+    case 'whoami':   await cmdWhoami();   break;
+    case 'sudo':     await cmdSudo(args); break;
+    case 'clear':    await cmdClear();    break;
+    case 'help':     await cmdHelp();     break;
+    case 'date':     await cmdDate();     break;
+    case 'echo':     await cmdEcho(args); break;
+    case 'uptime':   await cmdUptime();   break;
+    case 'ls':       await cmdLs();       break;
+    case 'uname':    await cmdUname();    break;
+    case 'logout':   logout();            break;
+    default:
+      await appendLine(`<span class="t-error">bash: ${escHtml(raw)}: command not found</span>`, 't-error');
+      await appendLine(`<span class="t-muted">hint: type <span class="t-accent">help</span> for available commands</span>`, 't-muted');
+  }
+  await appendBlank();
+}
+
+/* ── Commands ── */
+async function cmdWhoami() {
+  await appendLine(`<span class="t-accent">${currentUser.username}</span>`, 't-info');
+  await appendLine(`uid=0(root) gid=0(root) groups=0(root),27(sudo),1000(${currentUser.username})`, 't-muted');
+}
+
+async function cmdSudo(args) {
+  if (!args.length) {
+    await appendLine('[sudo] usage: sudo &lt;command&gt;', 't-warn');
+    return;
+  }
+  const sub = args.join(' ');
+  if (sub === 'scan') { await cmdSudoScan(); return; }
+  if (sub === 'reboot') {
+    await appendLine('⚠ Reboot requires physical access token.', 't-warn'); return;
+  }
+  await appendLine(`sudo: ${escHtml(sub)}: operation not permitted in this context.`, 't-error');
+}
+
+async function cmdSudoScan() {
+  scanning = true;
+  const targets = [
+    '192.168.1.1','10.0.0.254','172.16.0.1',
+    '45.33.32.156','8.8.8.8','104.21.42.0',
   ];
+  const ports = ['22','80','443','3306','8080','27017'];
 
-  const interval = setInterval(() => {
-    output.innerHTML += fakeLogs[i] + "\\n";
-    i++;
-    if (i >= fakeLogs.length) clearInterval(interval);
-  }, 600);
+  await appendLine('Initializing network scan…', 't-muted');
+  await appendScanBar(800);
+  await appendLine(`Targeting <span class="t-accent">${targets.length}</span> hosts across 3 subnets`, 't-info');
+  await appendBlank();
+
+  for (let i = 0; i < targets.length; i++) {
+    const ip     = targets[i];
+    const open   = ports.filter(() => Math.random() > .55);
+    const status = open.length ? 'OPEN' : 'FILTERED';
+    const cls    = open.length ? 't-success' : 't-muted';
+    await appendLine(
+      `[<span class="${cls}">${status.padEnd(8)}</span>]&nbsp;${ip.padEnd(16)}&nbsp;` +
+      (open.length ? `ports: <span class="t-accent">${open.join(', ')}</span>` : 'no response'),
+      't-info', i * 140
+    );
+    await appendScanBar(600, 0);
+  }
+
+  await appendBlank(targets.length * 140 + 200);
+  await appendLine('━━━ SCAN COMPLETE ━━━', 't-accent', targets.length * 140 + 250);
+  await appendLine(
+    `<span class="t-success">6 hosts scanned</span>&nbsp;&nbsp;` +
+    `<span class="t-warn">${targets.filter(()=>Math.random()>.4).length} with open ports</span>&nbsp;&nbsp;` +
+    `<span class="t-muted">elapsed: ${(targets.length*0.14+1.2).toFixed(2)}s</span>`,
+    't-info', targets.length * 140 + 320
+  );
+  scanning = false;
+}
+
+async function cmdClear() { clearOutput(); }
+
+async function cmdHelp() {
+  const cmds = [
+    ['whoami',      'Display current operator identity'],
+    ['sudo scan',   'Run network reconnaissance scan'],
+    ['clear',       'Clear terminal output'],
+    ['date',        'Show current system date/time'],
+    ['uptime',      'Show session uptime'],
+    ['uname',       'Print system information'],
+    ['ls',          'List virtual filesystem entries'],
+    ['echo [text]', 'Print text to terminal'],
+    ['logout',      'Terminate session'],
+    ['help',        'Show this help page'],
+  ];
+  await appendLine('┌─ AVAILABLE COMMANDS ──────────────────────────────┐', 't-muted');
+  for (const [c, d] of cmds) {
+    await appendLine(
+      `│  <span class="t-accent">${c.padEnd(14)}</span>  <span class="t-muted">${d}</span>`,
+      't-info'
+    );
+  }
+  await appendLine('└───────────────────────────────────────────────────┘', 't-muted');
+}
+
+async function cmdDate() {
+  await appendLine(new Date().toString(), 't-accent');
+}
+
+async function cmdEcho(args) {
+  await appendLine(escHtml(args.join(' ')) || '', 't-info');
+}
+
+async function cmdUptime() {
+  const diff = Math.floor((Date.now() - uptimeStart) / 1000);
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  await appendLine(
+    `up <span class="t-accent">${h}h ${m}m ${s}s</span>&nbsp;&nbsp;load avg: <span class="t-cyan">0.12 0.08 0.04</span>`,
+    't-info'
+  );
+}
+
+async function cmdLs() {
+  const entries = [
+    { name:'bin',      type:'d', perm:'drwxr-xr-x' },
+    { name:'etc',      type:'d', perm:'drwxr-xr-x' },
+    { name:'.profile', type:'f', perm:'-rw-r--r--' },
+    { name:'.nx_rc',   type:'f', perm:'-rw-------' },
+    { name:'logs',     type:'d', perm:'drwx------' },
+    { name:'tools',    type:'d', perm:'drwxr-x---' },
+  ];
+  for (const e of entries) {
+    const col = e.type === 'd' ? 't-accent' : 't-info';
+    await appendLine(
+      `${e.perm}&nbsp;&nbsp;root&nbsp;root&nbsp;&nbsp;<span class="${col}">${e.name}</span>`,
+      't-info'
+    );
+  }
+}
+
+async function cmdUname() {
+  await appendLine(
+    'NX-OS <span class="t-accent">nx-kernel-9.1.0</span> #1 SMP&nbsp;' +
+    '<span class="t-muted">x86_64 GNU/Linux</span>',
+    't-info'
+  );
 }
 </script>
-
 </body>
 </html>
